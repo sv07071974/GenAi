@@ -326,7 +326,9 @@ with gr.Blocks(title="Multi-Website Text Analyzer") as app:
     6. Click "Download Results as CSV" to save the results to your computer
     """)
 
-# Launch the app
 if __name__ == "__main__":
-    app.launch()
+    app.launch(share=True)
+else:
+    # This exposes the app variable for Gunicorn
+    # This is critical for Azure deployment
     app = app
