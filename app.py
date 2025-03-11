@@ -2,13 +2,12 @@ import gradio as gr
 import requests
 from bs4 import BeautifulSoup
 import openai
+import re
 import os
 import pandas as pd
 import concurrent.futures
 import time
-import tempfile
-import io
-import traceback
+import sys
 import logging
 
 # Set up logging
@@ -35,12 +34,10 @@ def extract_text_from_url(url):
     try:
         # Format the URL before use
         formatted_url = format_url(url)
-        
-        logger.info(f"Extracting text from: {formatted_url}")
 
         # Send request to get website content
         headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'}
-        response = requests.get(formatted_url, headers=headers, timeout=10)
+        response = requests.get(formatted_url, headers=headers, timeout=5)  # Reduced timeout
         response.raise_for_status()
 
         # Parse HTML content
@@ -215,33 +212,18 @@ def process_multiple_websites(urls_text, search_terms_text, api_key):
 
         results = []
 
-        # Process each URL with fewer workers (less resource intensive)
-        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
-            future_to_url = {executor.submit(check_text_in_website, url, search_terms_text, api_key): url for url in urls}
-
-            for future in concurrent.futures.as_completed(future_to_url):
-                result = future.result()
-                results.append(result)
+        # Process URLs sequentially instead of concurrently to reduce resource usage
+        for url in urls:
+            result = check_text_in_website(url, search_terms_text, api_key)
+            results.append(result)
 
         # Create a DataFrame for display
         df = pd.DataFrame(results)
 
-        # Generate a CSV file in memory instead of on disk
-        csv_buffer = io.StringIO()
-        df.to_csv(csv_buffer, index=False)
-        csv_content = csv_buffer.getvalue()
-        
-        # Create a temp file for download
-        temp_dir = tempfile.gettempdir()
-        timestamp = time.strftime("%Y%m%d-%H%M%S")
-        csv_filename = os.path.join(temp_dir, f"website_analysis_{timestamp}.csv")
-        
-        with open(csv_filename, "w") as f:
-            f.write(csv_content)
-
-        return f"Processing complete. Results ready for download.", df, csv_filename
+        # Skip saving to file entirely - just return the DataFrame
+        return "Processing complete. Results displayed in table below.", df, None
     except Exception as e:
-        error_msg = f"Error processing websites: {str(e)}\n{traceback.format_exc()}"
+        error_msg = f"Error processing websites: {str(e)}"
         logger.error(error_msg)
         return error_msg, None, None
 
@@ -257,27 +239,21 @@ def upload_urls_file(file):
         logger.error(f"Error reading file: {str(e)}")
         return f"Error reading file: {str(e)}"
 
-# Function to prepare file for download
-def prepare_download(filename):
-    try:
-        if filename and os.path.exists(filename):
-            return filename
-        return None
-    except Exception as e:
-        logger.error(f"Error preparing download: {str(e)}")
-        return None
-
-# Simple health check endpoint
-def health_check():
-    return "OK"
+# Debug info function
+def debug_info():
+    debug_data = {
+        "python_version": sys.version,
+        "current_dir": os.getcwd(),
+        "env_vars": {k: v for k, v in os.environ.items() if not k.startswith("APPSETTING_") and not "KEY" in k.upper() and not "SECRET" in k.upper() and not "TOKEN" in k.upper()},
+        "dir_contents": os.listdir(),
+    }
+    
+    return str(debug_data)
 
 # Create Gradio interface
-with gr.Blocks(title="Multi-Website Text Analyzer") as demo:  
+with gr.Blocks(title="Multi-Website Text Analyzer") as demo:
     gr.Markdown("# Multi-Website Text Analyzer")
     gr.Markdown("This app checks multiple websites to see if they contain specific text.")
-
-    # Add health check (this helps with Azure health monitoring)
-    demo.load(fn=health_check, inputs=None, outputs=None)
 
     # Store CSV filename for download
     csv_file = gr.State(None)
@@ -325,9 +301,14 @@ with gr.Blocks(title="Multi-Website Text Analyzer") as demo:
     with gr.Row():
         results_output = gr.DataFrame(label="Results")
 
-    with gr.Row():
-        download_button = gr.Button("Download Results as CSV")
-        download_output = gr.File(label="Download")
+    # Removed download button and file output
+    # For now, display results only in the table
+
+    with gr.Tab("Debug"):
+        debug_button = gr.Button("Get Debug Info")
+        debug_output = gr.Textbox(label="Debug Information", lines=10)
+        
+        debug_button.click(fn=debug_info, inputs=None, outputs=debug_output)
 
     # Set up event handlers
     submit_button.click(
@@ -348,13 +329,6 @@ with gr.Blocks(title="Multi-Website Text Analyzer") as demo:
         outputs=[status_output, results_output, csv_file]
     )
 
-    # Handle download button
-    download_button.click(
-        fn=prepare_download,
-        inputs=[csv_file],
-        outputs=[download_output]
-    )
-
     gr.Markdown("## Instructions")
     gr.Markdown("""
     1. Enter website URLs (one per line) or upload a text file containing URLs
@@ -366,7 +340,6 @@ with gr.Blocks(title="Multi-Website Text Analyzer") as demo:
        - "Contains" columns show "Yes" or "No" for each search term
        - "Decision" column shows "Accepted" if all terms are "No", or "Rejected" if any term is "Yes"
        - "Company Description" provides a brief summary of what the website is about
-    6. Click "Download Results as CSV" to save the results to your computer
     """)
 
 # CRITICAL PART FOR AZURE DEPLOYMENT
