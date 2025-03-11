@@ -2,11 +2,18 @@ import gradio as gr
 import requests
 from bs4 import BeautifulSoup
 import openai
-import re
 import os
 import pandas as pd
 import concurrent.futures
 import time
+import tempfile
+import io
+import traceback
+import logging
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Function to format URL properly
 def format_url(url):
@@ -28,6 +35,8 @@ def extract_text_from_url(url):
     try:
         # Format the URL before use
         formatted_url = format_url(url)
+        
+        logger.info(f"Extracting text from: {formatted_url}")
 
         # Send request to get website content
         headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'}
@@ -51,8 +60,10 @@ def extract_text_from_url(url):
 
         return text
     except requests.exceptions.RequestException as e:
+        logger.error(f"Request error: {str(e)}")
         return f"Error fetching website: {str(e)}"
     except Exception as e:
+        logger.error(f"Unexpected error: {str(e)}")
         return f"Error: {str(e)}"
 
 # Function to translate text to English using OpenAI
@@ -94,6 +105,7 @@ def translate_text(text, api_key):
 
         return "Translation successful", translated_text
     except Exception as e:
+        logger.error(f"Translation error: {str(e)}")
         return f"Translation error: {str(e)}", text
 
 # Function to generate company description using OpenAI
@@ -126,94 +138,112 @@ def generate_company_description(text, url, api_key):
 
         return description
     except Exception as e:
+        logger.error(f"Description generation error: {str(e)}")
         return f"Could not generate description: {str(e)}"
 
 # Function to check if any of the comma-separated terms exist in website content
 def check_text_in_website(url, search_terms_text, api_key):
-    # Format the URL for display
-    formatted_url = format_url(url)
+    try:
+        # Format the URL for display
+        formatted_url = format_url(url)
 
-    # Extract text from website
-    extracted_text = extract_text_from_url(url)
+        # Extract text from website
+        extracted_text = extract_text_from_url(url)
 
-    if isinstance(extracted_text, str) and extracted_text.startswith("Error"):
-        return {"Website": formatted_url, "Status": "Error", "Company Description": "N/A", "Decision": "N/A", "Error Message": extracted_text}
+        if isinstance(extracted_text, str) and extracted_text.startswith("Error"):
+            return {"Website": formatted_url, "Status": "Error", "Company Description": "N/A", "Decision": "N/A", "Error Message": extracted_text}
 
-    # Translate text to English
-    translation_status, translated_text = translate_text(extracted_text, api_key)
+        # Translate text to English
+        translation_status, translated_text = translate_text(extracted_text, api_key)
 
-    if translation_status.startswith("Translation error"):
-        return {"Website": formatted_url, "Status": "Translation Error", "Company Description": "N/A", "Decision": "N/A", "Error Message": translation_status}
+        if translation_status.startswith("Translation error"):
+            return {"Website": formatted_url, "Status": "Translation Error", "Company Description": "N/A", "Decision": "N/A", "Error Message": translation_status}
 
-    # Generate company description
-    company_description = generate_company_description(translated_text, formatted_url, api_key)
+        # Generate company description
+        company_description = generate_company_description(translated_text, formatted_url, api_key)
 
-    # Parse comma-separated search terms
-    search_terms = [term.strip().lower() for term in search_terms_text.split(',') if term.strip()]
+        # Parse comma-separated search terms
+        search_terms = [term.strip().lower() for term in search_terms_text.split(',') if term.strip()]
 
-    # Initialize result dictionary for each term
-    term_results = {}
-    any_term_found = False
+        # Initialize result dictionary for each term
+        term_results = {}
+        any_term_found = False
 
-    for term in search_terms:
-        # Check if term is in translated content (case insensitive)
-        contains_term = "Yes" if term.lower() in translated_text.lower() else "No"
-        term_results[term] = contains_term
+        for term in search_terms:
+            # Check if term is in translated content (case insensitive)
+            contains_term = "Yes" if term.lower() in translated_text.lower() else "No"
+            term_results[term] = contains_term
 
-        if contains_term == "Yes":
-            any_term_found = True
+            if contains_term == "Yes":
+                any_term_found = True
 
-    # Determine decision
-    decision = "Rejected" if any_term_found else "Accepted"
+        # Determine decision
+        decision = "Rejected" if any_term_found else "Accepted"
 
-    # Add basic information to result
-    result = {
-        "Website": formatted_url,
-        "Status": "Success",
-        "Company Description": company_description,
-        "Decision": decision,
-        "Error Message": ""
-    }
+        # Add basic information to result
+        result = {
+            "Website": formatted_url,
+            "Status": "Success",
+            "Company Description": company_description,
+            "Decision": decision,
+            "Error Message": ""
+        }
 
-    # Add result for each search term
-    for term, contains in term_results.items():
-        result[f"Contains '{term}'"] = contains
+        # Add result for each search term
+        for term, contains in term_results.items():
+            result[f"Contains '{term}'"] = contains
 
-    return result
+        return result
+    except Exception as e:
+        logger.error(f"Error checking website {url}: {str(e)}")
+        return {"Website": url, "Status": "Error", "Company Description": "N/A", "Decision": "N/A", "Error Message": f"Unexpected error: {str(e)}"}
 
 # Function to process multiple websites
 def process_multiple_websites(urls_text, search_terms_text, api_key):
-    if not urls_text or not search_terms_text:
-        return "Please provide both website URLs and text to search for.", None, None
+    try:
+        if not urls_text or not search_terms_text:
+            return "Please provide both website URLs and text to search for.", None, None
 
-    if not api_key:
-        return "Please provide an OpenAI API key.", None, None
+        if not api_key:
+            return "Please provide an OpenAI API key.", None, None
 
-    # Parse list of URLs
-    urls = [url.strip() for url in urls_text.split('\n') if url.strip()]
+        # Parse list of URLs
+        urls = [url.strip() for url in urls_text.split('\n') if url.strip()]
 
-    if not urls:
-        return "No valid URLs provided.", None, None
+        if not urls:
+            return "No valid URLs provided.", None, None
 
-    results = []
+        results = []
 
-    # Process each URL (with option to parallelize)
-    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-        future_to_url = {executor.submit(check_text_in_website, url, search_terms_text, api_key): url for url in urls}
+        # Process each URL with fewer workers (less resource intensive)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+            future_to_url = {executor.submit(check_text_in_website, url, search_terms_text, api_key): url for url in urls}
 
-        for future in concurrent.futures.as_completed(future_to_url):
-            result = future.result()
-            results.append(result)
+            for future in concurrent.futures.as_completed(future_to_url):
+                result = future.result()
+                results.append(result)
 
-    # Create a DataFrame for display
-    df = pd.DataFrame(results)
+        # Create a DataFrame for display
+        df = pd.DataFrame(results)
 
-    # Generate a CSV file for download
-    timestamp = time.strftime("%Y%m%d-%H%M%S")
-    csv_filename = f"website_analysis_{timestamp}.csv"
-    df.to_csv(csv_filename, index=False)
+        # Generate a CSV file in memory instead of on disk
+        csv_buffer = io.StringIO()
+        df.to_csv(csv_buffer, index=False)
+        csv_content = csv_buffer.getvalue()
+        
+        # Create a temp file for download
+        temp_dir = tempfile.gettempdir()
+        timestamp = time.strftime("%Y%m%d-%H%M%S")
+        csv_filename = os.path.join(temp_dir, f"website_analysis_{timestamp}.csv")
+        
+        with open(csv_filename, "w") as f:
+            f.write(csv_content)
 
-    return f"Processing complete. Results saved to {csv_filename}", df, csv_filename
+        return f"Processing complete. Results ready for download.", df, csv_filename
+    except Exception as e:
+        error_msg = f"Error processing websites: {str(e)}\n{traceback.format_exc()}"
+        logger.error(error_msg)
+        return error_msg, None, None
 
 # Function to upload URLs from file
 def upload_urls_file(file):
@@ -224,12 +254,30 @@ def upload_urls_file(file):
         content = file.decode('utf-8')
         return content
     except Exception as e:
+        logger.error(f"Error reading file: {str(e)}")
         return f"Error reading file: {str(e)}"
 
+# Function to prepare file for download
+def prepare_download(filename):
+    try:
+        if filename and os.path.exists(filename):
+            return filename
+        return None
+    except Exception as e:
+        logger.error(f"Error preparing download: {str(e)}")
+        return None
+
+# Simple health check endpoint
+def health_check():
+    return "OK"
+
 # Create Gradio interface
-with gr.Blocks(title="Multi-Website Text Analyzer") as demo:  # Changed from 'app' to 'demo'
+with gr.Blocks(title="Multi-Website Text Analyzer") as demo:  
     gr.Markdown("# Multi-Website Text Analyzer")
     gr.Markdown("This app checks multiple websites to see if they contain specific text.")
+
+    # Add health check (this helps with Azure health monitoring)
+    demo.load(fn=health_check, inputs=None, outputs=None)
 
     # Store CSV filename for download
     csv_file = gr.State(None)
@@ -301,11 +349,6 @@ with gr.Blocks(title="Multi-Website Text Analyzer") as demo:  # Changed from 'ap
     )
 
     # Handle download button
-    def prepare_download(filename):
-        if filename:
-            return filename
-        return None
-
     download_button.click(
         fn=prepare_download,
         inputs=[csv_file],
