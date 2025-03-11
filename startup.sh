@@ -1,6 +1,5 @@
 #!/bin/bash
-# Set environment variables for better debugging
 export PYTHONUNBUFFERED=1
-
-# Start gunicorn with debug logging
-gunicorn --bind=0.0.0.0:8000 --timeout 600 --workers=1 --log-level debug app:app
+echo "Starting application..." > /home/LogFiles/startup.log 2>&1
+cd /home/site/wwwroot
+gunicorn --bind=0.0.0.0:8000 --timeout 600 --workers=1 app:app >> /home/LogFiles/gunicorn.log 2>&1
