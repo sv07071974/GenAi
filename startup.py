@@ -4,7 +4,7 @@ import os
 import sys
 
 # Define the port
-port = int(os.environ.get("PORT", 8000))
+port = int(os.environ.get("PORT", 7860))
 
 # Start the Gradio app
 if __name__ == "__main__":
