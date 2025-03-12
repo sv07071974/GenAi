@@ -2,13 +2,9 @@ import gradio as gr
 import requests
 from bs4 import BeautifulSoup
 import openai
-import re
-import os
 import pandas as pd
-import concurrent.futures
-import time
-import sys
 import logging
+import os
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -16,51 +12,33 @@ logger = logging.getLogger(__name__)
 
 # Function to format URL properly
 def format_url(url):
-    # Strip whitespace
     url = url.strip()
-
-    # Add https:// if no protocol specified
     if not url.startswith(('http://', 'https://')):
         url = 'https://' + url
-
-    # Add trailing slash if not present
     if not url.endswith('/'):
         url = url + '/'
-
     return url
 
 # Function to extract text from website
 def extract_text_from_url(url):
     try:
-        # Format the URL before use
         formatted_url = format_url(url)
-
-        # Send request to get website content
         headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'}
-        response = requests.get(formatted_url, headers=headers, timeout=5)  # Reduced timeout
+        response = requests.get(formatted_url, headers=headers, timeout=5)
         response.raise_for_status()
-
-        # Parse HTML content
+        
         soup = BeautifulSoup(response.text, 'html.parser')
-
-        # Remove script and style elements
         for script in soup(["script", "style"]):
             script.extract()
-
-        # Get text
+            
         text = soup.get_text(separator='\n')
-
-        # Clean text (remove extra whitespace and empty lines)
         lines = (line.strip() for line in text.splitlines())
         chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
         text = '\n'.join(chunk for chunk in chunks if chunk)
-
+        
         return text
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Request error: {str(e)}")
-        return f"Error fetching website: {str(e)}"
     except Exception as e:
-        logger.error(f"Unexpected error: {str(e)}")
+        logger.error(f"Error fetching website {url}: {str(e)}")
         return f"Error: {str(e)}"
 
 # Function to translate text to English using OpenAI
@@ -70,9 +48,8 @@ def translate_text(text, api_key):
 
     try:
         client = openai.OpenAI(api_key=api_key)
-
-        # If text is too long, process it in chunks
-        max_chunk_size = 4000  # Adjust based on token limits
+        max_chunk_size = 4000
+        
         if len(text) > max_chunk_size:
             chunks = [text[i:i+max_chunk_size] for i in range(0, len(text), max_chunk_size)]
             translated_chunks = []
@@ -112,8 +89,6 @@ def generate_company_description(text, url, api_key):
 
     try:
         client = openai.OpenAI(api_key=api_key)
-
-        # Use first 3000 characters of text to get context about company
         context = text[:3000]
 
         response = client.chat.completions.create(
@@ -127,10 +102,8 @@ def generate_company_description(text, url, api_key):
         )
 
         description = response.choices[0].message.content.strip()
-
-        # Ensure description is around 15 words
         words = description.split()
-        if len(words) > 20:  # Allow some flexibility
+        if len(words) > 20:
             description = " ".join(words[:15]) + "..."
 
         return description
@@ -141,43 +114,32 @@ def generate_company_description(text, url, api_key):
 # Function to check if any of the comma-separated terms exist in website content
 def check_text_in_website(url, search_terms_text, api_key):
     try:
-        # Format the URL for display
         formatted_url = format_url(url)
-
-        # Extract text from website
         extracted_text = extract_text_from_url(url)
 
         if isinstance(extracted_text, str) and extracted_text.startswith("Error"):
             return {"Website": formatted_url, "Status": "Error", "Company Description": "N/A", "Decision": "N/A", "Error Message": extracted_text}
 
-        # Translate text to English
         translation_status, translated_text = translate_text(extracted_text, api_key)
 
         if translation_status.startswith("Translation error"):
             return {"Website": formatted_url, "Status": "Translation Error", "Company Description": "N/A", "Decision": "N/A", "Error Message": translation_status}
 
-        # Generate company description
         company_description = generate_company_description(translated_text, formatted_url, api_key)
-
-        # Parse comma-separated search terms
         search_terms = [term.strip().lower() for term in search_terms_text.split(',') if term.strip()]
-
-        # Initialize result dictionary for each term
+        
         term_results = {}
         any_term_found = False
 
         for term in search_terms:
-            # Check if term is in translated content (case insensitive)
             contains_term = "Yes" if term.lower() in translated_text.lower() else "No"
             term_results[term] = contains_term
 
             if contains_term == "Yes":
                 any_term_found = True
 
-        # Determine decision
         decision = "Rejected" if any_term_found else "Accepted"
 
-        # Add basic information to result
         result = {
             "Website": formatted_url,
             "Status": "Success",
@@ -186,7 +148,6 @@ def check_text_in_website(url, search_terms_text, api_key):
             "Error Message": ""
         }
 
-        # Add result for each search term
         for term, contains in term_results.items():
             result[f"Contains '{term}'"] = contains
 
@@ -204,23 +165,19 @@ def process_multiple_websites(urls_text, search_terms_text, api_key):
         if not api_key:
             return "Please provide an OpenAI API key.", None, None
 
-        # Parse list of URLs
         urls = [url.strip() for url in urls_text.split('\n') if url.strip()]
 
         if not urls:
             return "No valid URLs provided.", None, None
 
         results = []
-
-        # Process URLs sequentially instead of concurrently to reduce resource usage
+        
+        # Process sequentially for better stability
         for url in urls:
             result = check_text_in_website(url, search_terms_text, api_key)
             results.append(result)
 
-        # Create a DataFrame for display
         df = pd.DataFrame(results)
-
-        # Skip saving to file entirely - just return the DataFrame
         return "Processing complete. Results displayed in table below.", df, None
     except Exception as e:
         error_msg = f"Error processing websites: {str(e)}"
@@ -241,14 +198,12 @@ def upload_urls_file(file):
 
 # Debug info function
 def debug_info():
-    debug_data = {
-        "python_version": sys.version,
+    info = {
         "current_dir": os.getcwd(),
-        "env_vars": {k: v for k, v in os.environ.items() if not k.startswith("APPSETTING_") and not "KEY" in k.upper() and not "SECRET" in k.upper() and not "TOKEN" in k.upper()},
-        "dir_contents": os.listdir(),
+        "files": os.listdir(),
+        "python_path": os.environ.get("PYTHONPATH", "Not set")
     }
-    
-    return str(debug_data)
+    return str(info)
 
 # Create Gradio interface
 with gr.Blocks(title="Multi-Website Text Analyzer") as demo:
@@ -301,9 +256,6 @@ with gr.Blocks(title="Multi-Website Text Analyzer") as demo:
     with gr.Row():
         results_output = gr.DataFrame(label="Results")
 
-    # Removed download button and file output
-    # For now, display results only in the table
-
     with gr.Tab("Debug"):
         debug_button = gr.Button("Get Debug Info")
         debug_output = gr.Textbox(label="Debug Information", lines=10)
@@ -342,8 +294,7 @@ with gr.Blocks(title="Multi-Website Text Analyzer") as demo:
        - "Company Description" provides a brief summary of what the website is about
     """)
 
-# CRITICAL PART FOR AZURE DEPLOYMENT
-# Export the ASGI app that Gunicorn will use
+# IMPORTANT: Export the ASGI app for Gunicorn
 app = demo.app
 
 # For local development only
