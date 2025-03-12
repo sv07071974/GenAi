@@ -1,18 +1,8 @@
-from flask import Flask, request, jsonify
 import gradio as gr
 import requests
 from bs4 import BeautifulSoup
 import openai
 import pandas as pd
-import logging
-import os
-
-# Set up logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-# Create a Flask app
-app = Flask(__name__)
 
 # Function to format URL properly
 def format_url(url):
@@ -42,7 +32,6 @@ def extract_text_from_url(url):
         
         return text
     except Exception as e:
-        logger.error(f"Error fetching website {url}: {str(e)}")
         return f"Error: {str(e)}"
 
 # Function to translate text to English using OpenAI
@@ -62,7 +51,7 @@ def translate_text(text, api_key):
                 response = client.chat.completions.create(
                     model="gpt-3.5-turbo",
                     messages=[
-                        {"role": "system", "content": "You are a helpful translation assistant. Translate the following text to English while preserving formatting."},
+                        {"role": "system", "content": "You are a helpful translation assistant."},
                         {"role": "user", "content": chunk}
                     ],
                     temperature=0.3
@@ -74,7 +63,7 @@ def translate_text(text, api_key):
             response = client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[
-                    {"role": "system", "content": "You are a helpful translation assistant. Translate the following text to English while preserving formatting."},
+                    {"role": "system", "content": "You are a helpful translation assistant."},
                     {"role": "user", "content": text}
                 ],
                 temperature=0.3
@@ -83,7 +72,6 @@ def translate_text(text, api_key):
 
         return "Translation successful", translated_text
     except Exception as e:
-        logger.error(f"Translation error: {str(e)}")
         return f"Translation error: {str(e)}", text
 
 # Function to generate company description using OpenAI
@@ -98,8 +86,8 @@ def generate_company_description(text, url, api_key):
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
-                {"role": "system", "content": "You are a business analyst assistant. Based on the website content provided, give a concise 15-word description of what the company or website is about."},
-                {"role": "user", "content": f"Website: {url}\n\nContent sample: {context}\n\nProvide a concise 15-word description of what this company or website is about:"}
+                {"role": "system", "content": "You are a business analyst."},
+                {"role": "user", "content": f"Describe this website in 15 words: {url}\nContent: {context}"}
             ],
             max_tokens=50,
             temperature=0.7
@@ -112,10 +100,9 @@ def generate_company_description(text, url, api_key):
 
         return description
     except Exception as e:
-        logger.error(f"Description generation error: {str(e)}")
         return f"Could not generate description: {str(e)}"
 
-# Function to check if any of the comma-separated terms exist in website content
+# Function to check if terms exist in website content
 def check_text_in_website(url, search_terms_text, api_key):
     try:
         formatted_url = format_url(url)
@@ -157,7 +144,6 @@ def check_text_in_website(url, search_terms_text, api_key):
 
         return result
     except Exception as e:
-        logger.error(f"Error checking website {url}: {str(e)}")
         return {"Website": url, "Status": "Error", "Company Description": "N/A", "Decision": "N/A", "Error Message": f"Unexpected error: {str(e)}"}
 
 # Function to process multiple websites
@@ -176,7 +162,7 @@ def process_multiple_websites(urls_text, search_terms_text, api_key):
 
         results = []
         
-        # Process sequentially for better stability
+        # Process sequentially
         for url in urls:
             result = check_text_in_website(url, search_terms_text, api_key)
             results.append(result)
@@ -184,9 +170,7 @@ def process_multiple_websites(urls_text, search_terms_text, api_key):
         df = pd.DataFrame(results)
         return "Processing complete. Results displayed in table below.", df, None
     except Exception as e:
-        error_msg = f"Error processing websites: {str(e)}"
-        logger.error(error_msg)
-        return error_msg, None, None
+        return f"Error processing websites: {str(e)}", None, None
 
 # Function to upload URLs from file
 def upload_urls_file(file):
@@ -197,17 +181,7 @@ def upload_urls_file(file):
         content = file.decode('utf-8')
         return content
     except Exception as e:
-        logger.error(f"Error reading file: {str(e)}")
         return f"Error reading file: {str(e)}"
-
-# Debug info function
-def debug_info():
-    info = {
-        "current_dir": os.getcwd(),
-        "files": os.listdir(),
-        "python_path": os.environ.get("PYTHONPATH", "Not set")
-    }
-    return str(info)
 
 # Create Gradio interface
 with gr.Blocks(title="Multi-Website Text Analyzer") as demo:
@@ -223,8 +197,7 @@ with gr.Blocks(title="Multi-Website Text Analyzer") as demo:
                 urls_input = gr.Textbox(
                     label="Website URLs (one per line)", 
                     placeholder="example.com\nanother-site.org", 
-                    lines=8,
-                    info="URLs will automatically have 'https://' added if missing and '/' added at the end"
+                    lines=8
                 )
                 search_text_input = gr.Textbox(
                     label="Terms to Search For (comma-separated)", 
@@ -260,12 +233,6 @@ with gr.Blocks(title="Multi-Website Text Analyzer") as demo:
     with gr.Row():
         results_output = gr.DataFrame(label="Results")
 
-    with gr.Tab("Debug"):
-        debug_button = gr.Button("Get Debug Info")
-        debug_output = gr.Textbox(label="Debug Information", lines=10)
-        
-        debug_button.click(fn=debug_info, inputs=None, outputs=debug_output)
-
     # Set up event handlers
     submit_button.click(
         fn=process_multiple_websites,
@@ -288,53 +255,15 @@ with gr.Blocks(title="Multi-Website Text Analyzer") as demo:
     gr.Markdown("## Instructions")
     gr.Markdown("""
     1. Enter website URLs (one per line) or upload a text file containing URLs
-       - You don't need to include 'https://' or trailing slashes - they'll be added automatically
     2. Specify the terms you want to search for, separated by commas
     3. Provide your OpenAI API key (never share your API key publicly)
     4. Click "Check Websites" to process the list
-    5. View results in the table:
-       - "Contains" columns show "Yes" or "No" for each search term
-       - "Decision" column shows "Accepted" if all terms are "No", or "Rejected" if any term is "Yes"
-       - "Company Description" provides a brief summary of what the website is about
+    5. View results in the table
     """)
 
-# Create a Flask route for the home page
-@app.route('/')
-def home():
-    return """
-    <html>
-    <head>
-        <title>Website Analyzer</title>
-        <meta http-equiv="refresh" content="0;url=/gradio">
-        <style>
-            body {
-                font-family: Arial, sans-serif;
-                text-align: center;
-                margin-top: 50px;
-            }
-        </style>
-    </head>
-    <body>
-        <h1>Website Analyzer</h1>
-        <p>Redirecting to application...</p>
-        <p>If you are not redirected, <a href="/gradio">click here</a>.</p>
-    </body>
-    </html>
-    """
+# Export for Azure
+app = demo.app
 
-# Mount Gradio app
-gradio_app = demo.queue().launch(server_name="0.0.0.0", server_port=8000, share=False, prevent_thread_lock=True)
-demo.queue()
-
-# Use WSGI middleware to combine Flask and Gradio
-from werkzeug.middleware.dispatcher import DispatcherMiddleware
-from werkzeug.serving import run_simple
-
-# This is the application that will be used by Azure
-application = DispatcherMiddleware(app, {
-    '/gradio': gradio_app
-})
-
-# For local testing only
+# For local testing
 if __name__ == "__main__":
-    run_simple('0.0.0.0', 8000, application)
+    demo.launch()
