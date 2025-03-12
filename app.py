@@ -1,3 +1,4 @@
+from flask import Flask, request, jsonify
 import gradio as gr
 import requests
 from bs4 import BeautifulSoup
@@ -9,6 +10,9 @@ import os
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Create a Flask app
+app = Flask(__name__)
 
 # Function to format URL properly
 def format_url(url):
@@ -294,9 +298,43 @@ with gr.Blocks(title="Multi-Website Text Analyzer") as demo:
        - "Company Description" provides a brief summary of what the website is about
     """)
 
-# IMPORTANT: Export the ASGI app for Gunicorn
-app = demo.app
+# Create a Flask route for the home page
+@app.route('/')
+def home():
+    return """
+    <html>
+    <head>
+        <title>Website Analyzer</title>
+        <meta http-equiv="refresh" content="0;url=/gradio">
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                text-align: center;
+                margin-top: 50px;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>Website Analyzer</h1>
+        <p>Redirecting to application...</p>
+        <p>If you are not redirected, <a href="/gradio">click here</a>.</p>
+    </body>
+    </html>
+    """
 
-# For local development only
+# Mount Gradio app
+gradio_app = demo.queue().launch(server_name="0.0.0.0", server_port=8000, share=False, prevent_thread_lock=True)
+demo.queue()
+
+# Use WSGI middleware to combine Flask and Gradio
+from werkzeug.middleware.dispatcher import DispatcherMiddleware
+from werkzeug.serving import run_simple
+
+# This is the application that will be used by Azure
+application = DispatcherMiddleware(app, {
+    '/gradio': gradio_app
+})
+
+# For local testing only
 if __name__ == "__main__":
-    demo.launch(share=True)
+    run_simple('0.0.0.0', 8000, application)
