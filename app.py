@@ -7,6 +7,7 @@ import os
 import pandas as pd
 import concurrent.futures
 import time
+from flask import Flask, render_template, send_from_directory
 
 # Function to format URL properly
 def format_url(url):
@@ -232,115 +233,133 @@ def upload_urls_file(file):
     except Exception as e:
         return f"Error reading file: {str(e)}"
 
+# Create Flask app
+flask_app = Flask(__name__)
+
 # Create Gradio interface
-with gr.Blocks(title="Multi-Website Text Analyzer") as app:
-    gr.Markdown("# Multi-Website Text Analyzer")
-    gr.Markdown("This app checks multiple websites to see if they contain specific text.")
+def create_gradio_app():
+    with gr.Blocks(title="Multi-Website Text Analyzer") as gradio_app:
+        gr.Markdown("# Multi-Website Text Analyzer")
+        gr.Markdown("This app checks multiple websites to see if they contain specific text.")
 
-    # Store CSV filename for download
-    csv_file = gr.State(None)
+        # Store CSV filename for download
+        csv_file = gr.State(None)
 
-    with gr.Tab("Enter URLs"):
-        with gr.Row():
-            with gr.Column():
-                urls_input = gr.Textbox(
-                    label="Website URLs (one per line)", 
-                    placeholder="example.com\nanother-site.org", 
-                    lines=8,
-                    info="URLs will automatically have 'https://' added if missing and '/' added at the end"
-                )
-                search_text_input = gr.Textbox(
+        with gr.Tab("Enter URLs"):
+            with gr.Row():
+                with gr.Column():
+                    urls_input = gr.Textbox(
+                        label="Website URLs (one per line)", 
+                        placeholder="example.com\nanother-site.org", 
+                        lines=8,
+                        info="URLs will automatically have 'https://' added if missing and '/' added at the end"
+                    )
+                    search_text_input = gr.Textbox(
+                        label="Terms to Search For (comma-separated)", 
+                        placeholder="term1, term2, term3"
+                    )
+                    api_key_input = gr.Textbox(
+                        label="OpenAI API Key", 
+                        placeholder="sk-...", 
+                        type="password"
+                    )
+                    submit_button = gr.Button("Check Websites")
+
+        with gr.Tab("Upload URLs File"):
+            with gr.Row():
+                file_upload = gr.File(label="Upload a text file with URLs (one per line)")
+                load_button = gr.Button("Load URLs from File")
+
+            with gr.Row():
+                file_search_text = gr.Textbox(
                     label="Terms to Search For (comma-separated)", 
                     placeholder="term1, term2, term3"
                 )
-                api_key_input = gr.Textbox(
+                file_api_key = gr.Textbox(
                     label="OpenAI API Key", 
                     placeholder="sk-...", 
                     type="password"
                 )
-                submit_button = gr.Button("Check Websites")
-
-    with gr.Tab("Upload URLs File"):
-        with gr.Row():
-            file_upload = gr.File(label="Upload a text file with URLs (one per line)")
-            load_button = gr.Button("Load URLs from File")
+                file_submit_button = gr.Button("Check Websites from File")
 
         with gr.Row():
-            file_search_text = gr.Textbox(
-                label="Terms to Search For (comma-separated)", 
-                placeholder="term1, term2, term3"
-            )
-            file_api_key = gr.Textbox(
-                label="OpenAI API Key", 
-                placeholder="sk-...", 
-                type="password"
-            )
-            file_submit_button = gr.Button("Check Websites from File")
+            status_output = gr.Textbox(label="Status")
 
-    with gr.Row():
-        status_output = gr.Textbox(label="Status")
+        with gr.Row():
+            results_output = gr.DataFrame(label="Results")
 
-    with gr.Row():
-        results_output = gr.DataFrame(label="Results")
+        with gr.Row():
+            download_button = gr.Button("Download Results as CSV")
+            download_output = gr.File(label="Download")
 
-    with gr.Row():
-        download_button = gr.Button("Download Results as CSV")
-        download_output = gr.File(label="Download")
+        # Set up event handlers
+        submit_button.click(
+            fn=process_multiple_websites,
+            inputs=[urls_input, search_text_input, api_key_input],
+            outputs=[status_output, results_output, csv_file]
+        )
 
-    # Set up event handlers
-    submit_button.click(
-        fn=process_multiple_websites,
-        inputs=[urls_input, search_text_input, api_key_input],
-        outputs=[status_output, results_output, csv_file]
+        load_button.click(
+            fn=upload_urls_file,
+            inputs=[file_upload],
+            outputs=[urls_input]
+        )
+
+        file_submit_button.click(
+            fn=process_multiple_websites,
+            inputs=[urls_input, file_search_text, file_api_key],
+            outputs=[status_output, results_output, csv_file]
+        )
+
+        # Handle download button
+        def prepare_download(filename):
+            if filename:
+                return filename
+            return None
+
+        download_button.click(
+            fn=prepare_download,
+            inputs=[csv_file],
+            outputs=[download_output]
+        )
+
+        gr.Markdown("## Instructions")
+        gr.Markdown("""
+        1. Enter website URLs (one per line) or upload a text file containing URLs
+           - You don't need to include 'https://' or trailing slashes - they'll be added automatically
+        2. Specify the terms you want to search for, separated by commas
+        3. Provide your OpenAI API key (never share your API key publicly)
+        4. Click "Check Websites" to process the list
+        5. View results in the table:
+           - "Contains" columns show "Yes" or "No" for each search term
+           - "Decision" column shows "Accepted" if all terms are "No", or "Rejected" if any term is "Yes"
+           - "Company Description" provides a brief summary of what the website is about
+        6. Click "Download Results as CSV" to save the results to your computer
+        """)
+
+    return gradio_app
+
+# Create a route to serve the Gradio app
+@flask_app.route("/", methods=["GET", "POST"])
+def serve_gradio():
+    return create_gradio_app().launch(
+        server=flask_app,
+        prevent_thread_lock=True,
+        show_error=True
     )
 
-    load_button.click(
-        fn=upload_urls_file,
-        inputs=[file_upload],
-        outputs=[urls_input]
-    )
+# Create a route for robots.txt
+@flask_app.route('/robots.txt')
+@flask_app.route('/robots933456.txt')
+def robots():
+    return "User-agent: *\nDisallow: /\n"
 
-    file_submit_button.click(
-        fn=process_multiple_websites,
-        inputs=[urls_input, file_search_text, file_api_key],
-        outputs=[status_output, results_output, csv_file]
-    )
+# Create a health check endpoint
+@flask_app.route('/health')
+def health():
+    return "OK"
 
-    # Handle download button
-    def prepare_download(filename):
-        if filename:
-            return filename
-        return None
-
-    download_button.click(
-        fn=prepare_download,
-        inputs=[csv_file],
-        outputs=[download_output]
-    )
-
-    gr.Markdown("## Instructions")
-    gr.Markdown("""
-    1. Enter website URLs (one per line) or upload a text file containing URLs
-       - You don't need to include 'https://' or trailing slashes - they'll be added automatically
-    2. Specify the terms you want to search for, separated by commas
-    3. Provide your OpenAI API key (never share your API key publicly)
-    4. Click "Check Websites" to process the list
-    5. View results in the table:
-       - "Contains" columns show "Yes" or "No" for each search term
-       - "Decision" column shows "Accepted" if all terms are "No", or "Rejected" if any term is "Yes"
-       - "Company Description" provides a brief summary of what the website is about
-    6. Click "Download Results as CSV" to save the results to your computer
-    """)
-
-# Launch the app
+# For local development
 if __name__ == "__main__":
-    # Get port from Azure environment or use default
     port = int(os.environ.get("PORT", os.environ.get("WEBSITES_PORT", 8000)))
-    
-    # Launch with Azure-compatible settings
-    app.launch(
-        server_name="0.0.0.0",  # Listen on all network interfaces
-        server_port=port,
-        share=False,  # Don't use Gradio's share feature in production
-        debug=False   # Disable debug in production
-    )
+    flask_app.run(host='0.0.0.0', port=port, debug=False)
