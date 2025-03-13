@@ -234,9 +234,9 @@ def upload_urls_file(file):
         return f"Error reading file: {str(e)}"
 
 # Create Flask app
-flask_app = Flask(__name__)
+app = Flask(__name__)
 
-# Create Gradio interface
+# Create Gradio interface and integrate with Flask
 def create_gradio_app():
     with gr.Blocks(title="Multi-Website Text Analyzer") as gradio_app:
         gr.Markdown("# Multi-Website Text Analyzer")
@@ -340,26 +340,26 @@ def create_gradio_app():
     return gradio_app
 
 # Create a route to serve the Gradio app
-@flask_app.route("/", methods=["GET", "POST"])
+@app.route("/", methods=["GET", "POST"])
 def serve_gradio():
     return create_gradio_app().launch(
-        server=flask_app,
+        server=app,
         prevent_thread_lock=True,
         show_error=True
     )
 
 # Create a route for robots.txt
-@flask_app.route('/robots.txt')
-@flask_app.route('/robots933456.txt')
+@app.route('/robots.txt')
+@app.route('/robots933456.txt')
 def robots():
     return "User-agent: *\nDisallow: /\n"
 
 # Create a health check endpoint
-@flask_app.route('/health')
+@app.route('/health')
 def health():
     return "OK"
 
 # For local development
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", os.environ.get("WEBSITES_PORT", 8000)))
-    flask_app.run(host='0.0.0.0', port=port, debug=False)
+    app.run(host='0.0.0.0', port=port, debug=False)
