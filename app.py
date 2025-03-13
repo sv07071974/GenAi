@@ -1,4 +1,4 @@
-# app.py - Standalone Gradio app for Azure deployment
+# app.py - Fixed for Azure App Service deployment
 import gradio as gr
 import requests
 from bs4 import BeautifulSoup
@@ -8,11 +8,28 @@ import os
 import pandas as pd
 import concurrent.futures
 import time
+import logging
+import sys
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(sys.stdout)
+    ]
+)
+logger = logging.getLogger(__name__)
+
+# Print debug information about the environment
+logger.info(f"Python version: {sys.version}")
+logger.info(f"Current working directory: {os.getcwd()}")
+logger.info(f"Environment variables: PORT={os.environ.get('PORT')}, WEBSITES_PORT={os.environ.get('WEBSITES_PORT')}")
 
 # Create necessary directories
 os.makedirs('uploads', exist_ok=True)
 
-# Original functions from your code
+# Function implementations (same as before)
 def format_url(url):
     url = url.strip()
     if not url.startswith(('http://', 'https://')):
@@ -39,6 +56,7 @@ def extract_text_from_url(url):
         
         return text
     except Exception as e:
+        logger.error(f"Error extracting text from {url}: {str(e)}")
         return f"Error: {str(e)}"
 
 def translate_text(text, api_key):
@@ -78,6 +96,7 @@ def translate_text(text, api_key):
             
         return "Translation successful", translated_text
     except Exception as e:
+        logger.error(f"Translation error: {str(e)}")
         return f"Translation error: {str(e)}", text
 
 def generate_company_description(text, url, api_key):
@@ -105,6 +124,7 @@ def generate_company_description(text, url, api_key):
             
         return description
     except Exception as e:
+        logger.error(f"Could not generate description: {str(e)}")
         return f"Could not generate description: {str(e)}"
 
 def check_text_in_website(url, search_terms_text, api_key):
@@ -189,7 +209,7 @@ def upload_urls_file(file):
 
 # Create the Gradio interface
 def create_app():
-    with gr.Blocks(title="Multi-Website Text Analyzer") as demo:
+    with gr.Blocks(title="Multi-Website Text Analyzer", analytics_enabled=False) as demo:
         gr.Markdown("# Multi-Website Text Analyzer")
         gr.Markdown("This app checks multiple websites to see if they contain specific text.")
         
@@ -284,18 +304,49 @@ def create_app():
 
     return demo
 
+# Simple health check HTML response
+def get_health_check_html():
+    return """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Website Analyzer - Health Check</title>
+    </head>
+    <body>
+        <h1>Website Analyzer</h1>
+        <p>Service is running. Please visit the main application at the root URL.</p>
+        <p>Current time: {}</p>
+    </body>
+    </html>
+    """.format(time.strftime("%Y-%m-%d %H:%M:%S"))
+
 # Create and launch the app
 app = create_app()
 
 # For Azure App Service deployment
 if __name__ == "__main__":
-    # Get port from environment variable for Azure or use default
-    port = int(os.environ.get("PORT", 7860))
+    # Determine the port from environment variables - crucial for Azure
+    # Azure App Service will set WEBSITES_PORT environment variable
+    port = int(os.environ.get("WEBSITES_PORT") or os.environ.get("PORT") or 8000)
     
-    # Launch the app with specific configurations for Azure
-    app.launch(
-        server_name="0.0.0.0",  # Bind to all interfaces
-        server_port=port,
-        share=False,  # No temporary links
-        inbrowser=False  # Don't try to open browser
-    )
+    logger.info(f"Starting Gradio application on port {port}")
+    
+    # Custom HTTP health check for Azure
+    from fastapi import FastAPI
+    from fastapi.responses import HTMLResponse
+    import uvicorn
+    
+    # Create a FastAPI app - this will handle health checks
+    fastapi_app = FastAPI()
+    
+    # Add health check endpoint specifically for Azure
+    @fastapi_app.get("/")
+    @fastapi_app.get("/health")
+    def health():
+        return HTMLResponse(content=get_health_check_html())
+    
+    # Mount the Gradio app at the root
+    app.mount_gradio_app(fastapi_app, "/", gradio_api=True)
+    
+    # Start the FastAPI app on the correct port
+    uvicorn.run(fastapi_app, host="0.0.0.0", port=port)
