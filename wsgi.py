@@ -1,4 +1,4 @@
-from app import flask_app as application
+from app import app as application
 
 # This file is needed for WSGI servers to find the app object
 if __name__ == "__main__":
