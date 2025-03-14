@@ -1,17 +1,17 @@
-# Use an official Python runtime as a parent image
-FROM python:3.9 
+# Use an official Python image as a base
+FROM python:3.11-slim
 
-# Set the working directory in the container
+# Set the working directory inside the container
 WORKDIR /app
 
-# Copy the requirements file into the container
-COPY requirements.txt .
+# Copy all files from the current directory to /app
+COPY . .
 
-# Install any dependencies specified in requirements.txt
+# Install dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the application code into the container
-COPY . .
+# Expose any necessary ports (if applicable, e.g., for a web app)
+EXPOSE 5000
 
 # Specify the command to run on container startup
 CMD ["python", "wsgi.py"] # Replace your_app.py with your main python file
