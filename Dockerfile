@@ -14,4 +14,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Specify the command to run on container startup
-CMD ["python", "your_app.py"] # Replace your_app.py with your main python file.
+CMD ["python", "wsgi.py"] # Replace your_app.py with your main python file
