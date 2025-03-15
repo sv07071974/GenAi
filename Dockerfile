@@ -13,4 +13,4 @@ ENV PYTHONUNBUFFERED=1
 EXPOSE 7860
 
 # Run the application
-CMD ["python", "webappAnalyzer.py"]
+CMD ["python", "app.py"]
