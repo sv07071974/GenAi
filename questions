@@ -1,0 +1,106 @@
+1. What’s the overarching vision for your technology function when it comes to system design and customer engagement?
+* Empowering Financial Innovation: The technology function is positioned as a vital business component, driving financial innovation and delivering world-class client experiences 1.
+* Customer-Centric Architecture: System design is guided by a “Total Experience” philosophy—seamless, secure, and consistent engagement across channels, underpinned by Zero Trust architecture and AI-driven personalization 1.
+* Strategic Modernization: The roadmap includes decommissioning legacy systems, deploying scalable platforms, and leveraging Centers of Excellence (CoEs) to accelerate modernization and reduce operational friction 4.
+* Operational Resilience by Design: Enterprise-grade infrastructure, disaster recovery, and service management are embedded into system design to ensure stability and responsiveness 
+
+2. How do you define the relationship between system architecture and customer experience at your institution?
+* Architecture as Experience Enabler: System architecture is not just a backend function—it’s a strategic enabler of customer experience. Reference architectures in security, data, and integration directly support frictionless customer journeys 2.
+* Design Thinking Integration: Architecture teams apply design thinking to align technical capabilities with customer expectations, ensuring that every touchpoint is intuitive and responsive 3.
+* Automation and AI for Personalization: Architectural decisions prioritize AI tools for predictive maintenance and self-service, enhancing customer satisfaction while reducing support overhead 1.
+* Data-Driven Engagement: Mature data governance and analytics capabilities allow for real-time insights into customer behavior, enabling proactive service delivery
+
+3. To what extent is your technology roadmap influenced by customer expectations versus internal operational need?
+* Balanced Influence: The roadmap is shaped by both customer expectations and internal needs. Initiatives like core banking modernization and digital studio outcomes reflect this dual focus 4.
+* Customer-Led Prioritization: Projects such as the 3DS In-App Approvals Launch (3DS - In App Approvals - Customer Launch Plan) show how customer-facing features drive architectural decisions 5.
+* Operational Excellence as a Foundation: Internal needs—like cost optimization, vendor rationalization, and control strengthening—ensure that the technology backbone is efficient and scalable 4.
+* Strategic Governance: A revised EA governance model ensures that both customer and operational priorities are embedded in roadmap decisions, with oversight from transformation offices and strategic partners 
+
+
+3. To what extent is your technology roadmap influenced by customer expectations versus internal operational need?
+Balanced Influence
+* The roadmap is shaped by both external and internal forces.
+* Customer expectations drive innovation in digital channels, while internal needs ensure operational resilience and compliance.
+* Initiatives like core banking modernization and digital studio outcomes reflect this dual focus 1.
+Customer-Led Prioritization
+* Customer-facing features often take precedence in roadmap decisions.
+* A prime example is the 3DS - In App Approvals - Customer Launch Plan, which was prioritized to enhance user authentication and reduce friction 2.
+* Feedback loops from customer journeys and service analytics inform prioritization.
+Operational Excellence as a Foundation
+* Internal needs such as cost optimization, vendor rationalization, and control strengthening are foundational.
+* These ensure the technology backbone remains efficient, scalable, and secure 1.
+* Investments in automation and platform consolidation support long-term sustainability.
+Strategic Governance
+* A revised EA governance model ensures both customer and operational priorities are embedded in roadmap decisions.
+* Oversight from transformation offices and strategic partners ensures alignment with business goals.
+* Governance frameworks include checkpoints for compliance, risk, and value realization.
+
+7. How is system design enabling more personalized and responsive services for customers?
+* Microservice-Driven Personalization: Platforms like MOFT and Velocity enable modular deployment of micro frontends and services, allowing rapid customization of customer journeys 1.
+* AI-Enhanced Responsiveness: Initiatives such as the DOB/KYC AI use case prioritize real-time validation and contextual engagement, improving onboarding and service accuracy 2.
+* Dynamic Loyalty Programs: The shift from static rewards to dynamic cashback systems reflects a design pivot toward behavior-driven personalization 3.
+* Customer Data Platforms (CDPs): External partners like Aptiva propose CDPs and intelligent document processing to tailor content and interactions across channels 4.
+
+8. What role does data architecture play in understanding and anticipating customer needs?
+* Unified Metadata and Governance: Informatica-based metadata catalogs and unified data dictionaries ensure consistent interpretation of customer data across business and technical domains 5.
+* Data Quality Dimensions: Standards like completeness, accuracy, and timeliness are enforced to maintain reliable customer profiles and behavioral insights 6.
+* Real-Time Ingestion and Classification: Projects classify structured, semi-structured, and unstructured data for analytics, reporting, and AI modeling, enabling predictive personalization 5.
+* Cross-Functional Collaboration: Governance meetings and anonymization projects involve business units in defining critical data elements and use cases 7.
+
+9. How do you ensure real-time data flows without compromising security and compliance?
+* Encryption and Anonymization by Design: Data is encrypted in transit and at rest, with anonymization protocols embedded in extraction workflows 7.
+* IAM and Access Control Streams: Identity and access management is handled via dedicated streams, ensuring role-based access and compliance with GDPR and PCI-DSS 7.
+* Synthetic Data in Non-Prod Environments: Enterprise tools are being evaluated to mask and redact sensitive data during testing, preventing leaks 7.
+* DSPM and Compliance Frameworks: Data Security Posture Management initiatives and classification guidelines ensure that real-time flows adhere to regulatory standards 7.
+
+ 10. How does system design affect customer trust, especially around issues like uptime, data privacy, and transaction transparency? Has that changed as digital data access and AI have evolved?
+* Uptime as a Trust Metric: Business-critical applications (BC0 & BC1) are monitored daily, with uptime tracked against policy benchmarks. As of June 2025, 32 applications are registered in CMDB with 100% DR compliance for 11 of them 1.
+* Privacy and Consent in AI Systems: The ISG Standard - Enabling Technology mandates that customers be informed of risks and limitations before using AI-enabled services. Consent and education are embedded in the onboarding process 2.
+* Transparency in Intelligent Systems: AI systems are designed with explainability and fairness in mind, aligning with global best practices on trust and transparency 3 4.
+* Incident Response and Communication: CRM incidents like the invalid case spike in May 2025 were mitigated through geo-blocking and real-time monitoring, with clear communication to customers about alternative complaint channels 5.
+
+11. What measures are in place to ensure systems are resilient, especially during times of high market volatility or cyber threats?
+* Disaster Recovery and Resilience Planning: DR systems for BC0 & BC1 applications are required to match production capacity. Resilience assessments are ongoing, with 34 applications planned for DR in 2025 1.
+* Incident Management Protocols: P1 and P2 incidents meet SLA targets, with no open critical incidents as of mid-June. SLA compliance for P3 and P4 incidents is at 100% 1.
+* Fraud Detection and Risk Mitigation: Systems like PRIME4 P16-4 Fraudguard BFO provide layered security and fraud detection capabilities, ensuring operational integrity during high-risk periods 6.
+* Counterparty Risk Governance: The Counterparty Credit Risk Framework outlines oversight mechanisms, independent reviews, and mitigation strategies to manage systemic risk
+
+12. How are you integrating AI, machine learning, or other intelligent systems into your customer-facing systems?
+* AI/ML Operationalization: The Executive Summary - AI_ML COE 2025 v2 outlines deployment of MLOps tools for lifecycle automation, including data prep, model training, validation, and CI/CD integration 1.
+* Agentic AI Platforms: Initiatives like Mashreq Document Agents (MDA) use autonomous agents and LLMs to automate document processing across operations, enhancing speed and accuracy 2.
+* Strategic Alignment: The AI @ Mashreq (Focus group content draft) emphasizes aligning AI initiatives with business strategy, fostering collaboration across IT and business units 3.
+* Ethical AI Governance: Responsible AI guidelines ensure transparency, fairness, and data privacy in customer-facing systems 3.
+
+13. What role does API strategy and ecosystem integration play in enhancing customer journeys?
+* Composable Architecture: The Technology Strat Plan 2025_v0.1 highlights use of APIs to enable modular integration with fintechs and internal platforms, accelerating delivery of personalized services 4.
+* Partner Ecosystem Enablement: Collaborations with Microsoft, Accenture, and Capgemini support rapid deployment of GenAI use cases through API-driven models 4.
+* Integration with FX Platforms: The SGX FX <> Mashreq TBFX integration discussion showcases how API-led integration with external FX platforms enhances transaction transparency and customer experience 5.
+
+14. Can you speak to how partnerships or fintech integrations have reshaped parts of your system design?
+* Findexable Collaboration: Your interview with simon hardie reflects Mashreq’s openness to fintech benchmarking and co-designing future-ready systems 6.
+* Vendor-Led Innovation: RFPs for NEO FX and TBFX platforms demonstrate how fintech partnerships influence architecture decisions, from pricing modules to execution workflows 7 8 9.
+* Sandbox and MVP Models: The AI/GenAI sandbox and MVP rollout strategy enable experimentation with fintech solutions before full-scale deployment 4.
+
+
+
+17. What metrics or indicators do you use to evaluate the success of system-related innovations on customer engagement or business performance?
+* Customer Experience KPIs: Metrics include reduced support workload, faster issue resolution, and increased self-service adoption—evident in initiatives like chatbot and IVR modernization 1.
+* Operational Efficiency Gains: Time-to-resolution, ticket deflection rates, and cost savings are tracked across service desk and AI deployments 1.
+* Campaign Performance: The EADAAgenda29Feb2024 outlines how the Customer Data Platform (CDP) measures targeted communication success via segmentation, journey analytics, and email engagement 2.
+* Design System KPIs: External benchmarks suggest tracking component usage, time saved in feature development, and consistency across channels 3 4.
+
+18. What’s one system-related investment or initiative you’re most excited about over the next 12–18 months?
+* MLOps and LLMOps Tooling: The rollout of AI lifecycle automation tools will streamline model deployment, observability, and risk management across 82 existing and 56+ planned models 1.
+* Smart Converse and GenAI Automations: Initiatives like LLM-based Smart Converse and GenAI for log monitoring and Fusion reading are set to transform operational intelligence 5.
+* Open API Banking and Corporate Integration: Expansion of Open Finance and API banking platforms will deepen ecosystem connectivity and customer personalization 5.
+
+19. Where do you see the biggest gap between customer expectations and what financial systems can currently deliver—and how are you addressing it?
+* Real-Time Responsiveness: Incidents like the IPP payment delays in Egypt and UAE highlight gaps in transaction speed and reliability. Middleware and Flex teams are redesigning service pipelines to meet SLA targets 6.
+* Personalization at Scale: While segmentation tools exist, the ability to deliver hyper-personalized journeys across all channels is still evolving. CDP and AI investments aim to close this gap 2.
+* Transparency and Trust: Customers expect clear visibility into transactions and data usage. Initiatives like Eagle Eye Compiler throttling and DR compliance are improving system integrity 6.
+
+20. How do you see system design evolving as financial services become more embedded in customers’ daily lives? Does this pose any competitive challenges?
+* Embedded Finance Architecture: The shift toward composable platforms and Open API banking supports seamless integration into customer ecosystems 5.
+* Fintech Collaboration: Your interview with simon hardie reflects Mashreq’s proactive stance on fintech partnerships and co-designing future-ready systems 7.
+* Competitive Differentiation: The ability to deliver secure, personalized, and real-time services will be a key differentiator. Investments in GenAI, CDP, and ecosystem integration are positioning Mashreq ahead of the curve 1.
+  
